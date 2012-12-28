@@ -85,22 +85,43 @@ $(document).ready(function() {
     {
         try {
             $("#outputDiv").text("");
-            var num = $("#stepNumber").val();
             var clusterList;
-            var closestCluster;
-            var currPict;
+            var picturesList = [];
+            var maxDistance;
+            var minNum;
+            var maxNum;
+            var minDistances;
             var distances = [];
             clusterList = [ CreateCluster(pictures[0]) ];
-            for (var i=1; i< pictures.length; i++) {
-                currPict = {src: pictures[i], map: MakingPixelMap(pictures[i]) };
+            for (var i=1; i<pictures.length; i++) {
+                picturesList.push( {src: pictures[i], 
+                    map: MakingPixelMap(pictures[i]) } );
+                distances[i-1] = EuclideanDistance(picturesList[i-1]["map"], 
+                    clusterList[0]["center"]);
+            }
+            maxDistance = FindMax(distances);
+            clusterList.push( {center:picturesList[maxDistance]["map"], 
+                points: [ picturesList[maxDistance] ] } );
+            picturesList.splice(maxDistance, 1);
+            maxDistance = EuclideanDistance(clusterList[0]["center"], clusterList[1]["center"]);
+            while (picturesList.length) {
+                minDistances = [];
                 $.each( clusterList, function( index, cluster) {
-                    distances[index] = EuclideanDistance(currPict["map"], 
+                    for (var i=0; i< picturesList.length; i++) {
+                    distances[i] = EuclideanDistance(picturesList[i]["map"], 
                         cluster["center"]);
+                    }
+                    minNum =  FindMin(distances);
+                    minDistances[index] = {len: distances[ minNum ], num: minNum};
                 });
-                closestCluster = FindMin( distances, num );
-                    if (closestCluster == undefined ) {
-                        clusterList.push( CreateCluster(pictures[i]) );
-                    } else clusterList[closestCluster]["points"].push( currPict );
+                maxNum = FindMax( minDistances );
+                if (minDistances[maxNum]["len"] > maxDistance/clusterList.length) {
+                     clusterList.push( {center:picturesList[ minDistances[maxNum]["num"] ]["map"], 
+                         points: [ picturesList[ minDistances[maxNum]["num"] ] ] } );
+                } else {
+                    clusterList[maxNum]["points"].push( picturesList[ minDistances[maxNum]["num"] ] )
+                }
+                picturesList.splice( minDistances[maxNum]["num"], 1);
             }
             ShowPictures( clusterList );
         }
@@ -125,22 +146,20 @@ $(document).ready(function() {
         });
     }
     
-    function FindMin( distance, step )
+    function FindMax( distance )
     {
-        var min = distance[0];
+        var max = distance[0];
         var num = 0;
         for (var i=1; i<distance.length; i++) {
-            if (distance[i] < min ) {
-                min = distance[i];
+            if (distance[i] > max ) {
+                max = distance[i];
                 num = i;
             }
         }
-        if (min > step) {
-            return undefined;
-        } else return num;
+        return num;
     }
     
-    function FindMin( distance, step )
+    function FindMin( distance )
     {
         var min = distance[0];
         var num = 0;
